@@ -4,7 +4,7 @@ A personal game library with search, platform and genre filters, favorites, rece
 
 ## Open the library
 
-Open the single `index.html` file in a modern browser. The interface is self-contained; selecting a game downloads its compressed game page from this repository. The original game pages may also request assets from their original external hosts.
+Open the single `docs/index.html` file in a modern browser. The interface is self-contained; selecting a game downloads its compressed game page from this repository. The original game pages may also request assets from their original external hosts.
 
 ## Collection
 
@@ -19,7 +19,7 @@ Nineteen emulator templates and one non-game document are excluded. All supplied
 
 `game-data/` contains gzip-compressed HTML, split into at most 16 MiB binary pieces. The pieces for each game form one gzip stream. The catalog embedded in `index.html` records paths, lengths, and SHA-256 checksums. Only the selected game is fetched; the entire collection is never downloaded at startup.
 
-The GitHub Pages workflow publishes only `index.html`; game data is served from this repository separately. This keeps the published Pages site small. The same HTML can be downloaded and opened locally.
+GitHub Pages publishes only the `/docs` folder on `main`; game data is served from this repository separately. This keeps the published Pages site small. The same HTML can be downloaded and opened locally. The HTML pins its game downloads to a fixed data commit.
 
 ## Credits
 
