@@ -183,15 +183,15 @@ function gameCompatibility(game,session,emulator){
  if(emulator){window.EJS_CacheLimit=0;try{Object.defineProperty(window,'indexedDB',{value:undefined,configurable:true})}catch{}}
  let rendered=false,draws=0;
  const ready=()=>{if(!rendered){rendered=true;send('ready')}};
- for(const [type,names] of [[window.CanvasRenderingContext2D,['drawImage','fillText','stroke','fill']],[window.WebGLRenderingContext,['drawArrays','drawElements']],[window.WebGL2RenderingContext,['drawArrays','drawElements']]]){
+ for(const [type,names] of [[window.CanvasRenderingContext2D,['drawImage','fillText','stroke','fill']],[window.WebGLRenderingContext,['drawArrays','drawElements']],[window.WebGL2RenderingContext,['drawArrays','drawElements','drawArraysInstanced','drawElementsInstanced']],[window.GPUQueue,['submit']]]){
   if(!type)continue;
   for(const name of names){const original=type.prototype[name];if(!original)continue;type.prototype[name]=function(...args){const result=original.apply(this,args);if(++draws>=8)ready();return result}}
  }
- const optional=url=>/google-analytics|googletagmanager|cloudflareinsights|twitter|googlesyndication|fliplineads\.com|register-?sw\.js|cloak\.js|^https:\/\/cdn\.jsdelivr\.net\/js\/(?:main|all(?:\.min)?)\.js$|analytics_|sitelock\.js/i.test(url);
+ const optional=url=>/google-analytics|googletagmanager|cloudflareinsights|twitter|googlesyndication|fliplineads\.com|register-?sw\.js|cloak\.js|^https:\/\/cdn\.jsdelivr\.net\/js\/(?:main|all(?:\.min)?)\.js$|^https:\/\/ppfn\.github\.io\/js\/main\.js$|analytics_|sitelock\.js/i.test(url);
  window.addEventListener('error',event=>{
   const target=event.target;
   if(target&&target!==window){
-   if(target.tagName==='SCRIPT'&&!optional(target.src))send('error','A required game script could not load.',target.src);
+   if(target.tagName==='SCRIPT'&&target.getAttribute('src')?.trim()&&!optional(target.src))send('error','A game script could not load.',target.src);
   }else if(event.message&&!optional(event.filename||''))send('error',event.message,event.filename||'');
  },true);
  window.addEventListener('unhandledrejection',e=>{const reason=e.reason;send('error',reason?.message||reason||'The game stopped while loading.')});
@@ -228,7 +228,7 @@ window.addEventListener('message',event=>{
  if(event.source!==$('gameFrame')?.contentWindow||!activeGame||d?.type!=='playroom-health'||d.game!==activeGame.id||d.session!==loadSerial)return;
  if(d.kind==='ready'){
   gameHealth.ready=true;
-  if(!gameHealth.issues.length)$('playerStatus').textContent='Game is rendering · Click inside to play.';
+  if(!gameHealth.issues.length){$('playerStatus').textContent='Game is rendering · Click inside to play.';$('gameNotice').hidden=true;}
  }else if(d.kind==='starting'){gameHealth.controls=false;
  }else if(d.kind==='controls'){gameHealth.controls=true;
  }else if(d.kind==='error'){
