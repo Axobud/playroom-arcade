@@ -166,7 +166,7 @@ function trackRecent(g){recent=[{id:g.id,time:Date.now()},...recent.filter(v=>v.
 function sourceStream(base64Text){return new Blob([Uint8Array.from(atob(base64Text),c=>c.charCodeAt(0))]).stream()}
 async function inflate(stream){if(!('DecompressionStream' in window))throw new Error('This browser cannot unpack the games. Open this file in a current version of Chrome, Edge, Firefox, or Safari.');return await new Response(stream.pipeThrough(new DecompressionStream('gzip'))).text()}
 function cleanupFrame(){const f=$('gameFrame');if(f)f.remove();if(gameURL){URL.revokeObjectURL(gameURL);gameURL=null}}
-function gameCompatibility(game,session){
+function gameCompatibility(game,session,emulator){
  const send=(kind,message='',url='')=>parent.postMessage({type:'playroom-health',game,session,kind,message:String(message).slice(0,500),url:String(url).slice(0,500)},'*');
  // Some supplied loaders assume cookies exist even in an isolated embedded game.
  // Keep their cookies inside this game document; do not grant access to the library.
@@ -180,6 +180,7 @@ function gameCompatibility(game,session){
   }});
  }
  window.EJS_disableDatabases=true;
+ if(emulator){window.EJS_CacheLimit=0;try{Object.defineProperty(window,'indexedDB',{value:undefined,configurable:true})}catch{}}
  let rendered=false,draws=0;
  const ready=()=>{if(!rendered){rendered=true;send('ready')}};
  for(const [type,names] of [[window.CanvasRenderingContext2D,['drawImage','fillText','stroke','fill']],[window.WebGLRenderingContext,['drawArrays','drawElements']],[window.WebGL2RenderingContext,['drawArrays','drawElements']]]){
@@ -244,7 +245,7 @@ function adaptGame(text,g){
  if(text.includes('RufflePlayer')&&/container\.appendChild\(player\)/.test(text))text=text.replace(/<embed\b[^>]*>/gi,'');
  const saved=readStore('playroom.game.'+g.id,{});
  const setup=`(()=>{const initial=${JSON.stringify(saved).replace(/</g,'\\u003c')};function storage(seed,persist){const values={...seed};const api={getItem:k=>Object.hasOwn(values,String(k))?values[String(k)]:null,setItem:(k,v)=>{values[String(k)]=String(v);sync()},removeItem:k=>{delete values[String(k)];sync()},clear:()=>{for(const k of Object.keys(values))delete values[k];sync()},key:i=>Object.keys(values)[i]??null};function sync(){if(persist)parent.postMessage({type:'playroom-save',game:${JSON.stringify(g.id)},values},'*')}return new Proxy(api,{get:(t,k)=>k==='length'?Object.keys(values).length:k in t?t[k]:values[k],set:(t,k,v)=>{api.setItem(k,v);return true},deleteProperty:(t,k)=>{api.removeItem(k);return true},ownKeys:()=>Object.keys(values),getOwnPropertyDescriptor:()=>({enumerable:true,configurable:true})})}for(const name of ['localStorage','sessionStorage']){try{window[name].getItem('__playroom_check__')}catch{Object.defineProperty(window,name,{value:storage(name==='localStorage'?initial:{},name==='localStorage'),configurable:true})}}})();`;
- const shim='<script>'+setup+';('+gameCompatibility.toString()+')('+JSON.stringify(g.id)+','+loadSerial+');<'+ '/script>';
+ const shim='<script>'+setup+';('+gameCompatibility.toString()+')('+JSON.stringify(g.id)+','+loadSerial+','+/EJS_core\s*=/.test(text)+');<'+ '/script>';
  // Inject after the doctype, before supplied scripts. Existing base URLs remain intact.
  return text.replace(/<!doctype[^>]*>/i,'') ? '<!doctype html>'+shim+text.replace(/<!doctype[^>]*>/i,'') : '<!doctype html>'+shim+text;
 }
