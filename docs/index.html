@@ -180,7 +180,11 @@ function gameCompatibility(game,session,emulator){
   }});
  }
  window.EJS_disableDatabases=true;
- if(emulator){window.EJS_CacheLimit=0;try{Object.defineProperty(window,'indexedDB',{value:undefined,configurable:true})}catch{}}
+ if(emulator){
+  window.EJS_CacheLimit=0;try{Object.defineProperty(window,'indexedDB',{value:undefined,configurable:true})}catch{}
+  const previousReady=window.EJS_ready;
+  window.EJS_ready=function(...args){if(document.querySelector('.ejs_start_button'))send('controls');if(typeof previousReady==='function')return previousReady.apply(this,args)};
+ }
  let rendered=false,draws=0;
  const ready=()=>{if(!rendered){rendered=true;send('ready')}};
  for(const [type,names] of [[window.CanvasRenderingContext2D,['drawImage','fillText','stroke','fill']],[window.WebGLRenderingContext,['drawArrays','drawElements']],[window.WebGL2RenderingContext,['drawArrays','drawElements','drawArraysInstanced','drawElementsInstanced']],[window.GPUQueue,['submit']]]){
@@ -207,7 +211,7 @@ function gameCompatibility(game,session,emulator){
   this.addEventListener('error',()=>{if(!optional(String(url)))send('error','A game file could not be downloaded.',url)},{once:true});
   return openOriginal.call(this,method,url,...args);
  };
- window.addEventListener('click',e=>{if(e.target.closest?.('button,input[type=button]')){send('starting');setTimeout(()=>{if(!rendered)send('waiting')},25000)}},true);
+ window.addEventListener('click',e=>{if(e.target.closest?.('button,input[type=button],.ejs_start_button')){send('starting');setTimeout(()=>{if(!rendered)send('waiting')},25000)}},true);
  window.addEventListener('DOMContentLoaded',()=>{
   send('document');
   if(document.querySelector('button,input[type=button]'))send('controls');
@@ -231,6 +235,7 @@ window.addEventListener('message',event=>{
   if(!gameHealth.issues.length){$('playerStatus').textContent='Game is rendering · Click inside to play.';$('gameNotice').hidden=true;}
  }else if(d.kind==='starting'){gameHealth.controls=false;
  }else if(d.kind==='controls'){gameHealth.controls=true;
+  if(!gameHealth.ready&&!gameHealth.issues.length){$('gameNotice').hidden=true;$('playerStatus').textContent='Game controls ready · Click Start or Play inside the game.';}
  }else if(d.kind==='error'){
   const detail=String(d.message||'Loading error').slice(0,500)+(d.url?'\n'+String(d.url).slice(0,500):'');
   if(gameHealth.issues.includes(detail)||gameHealth.issues.length>=12)return;
